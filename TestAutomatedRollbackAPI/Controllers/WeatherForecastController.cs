@@ -9,7 +9,7 @@ namespace TestAutomatedRollbackAPI.Controllers
         [HttpGet]
         public IActionResult Get()
         {
-            return Ok("healthy - deployment successful!");
+            return Ok("healthy deployment successful!");
         }
     }
     //[ApiController]
