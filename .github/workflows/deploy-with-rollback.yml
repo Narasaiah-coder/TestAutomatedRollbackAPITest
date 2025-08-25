@@ -1,0 +1,61 @@
+name: Deploy with Automated Rollback
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      SERVICE_URL: ${{ secrets.PRODUCTION_URL }}
+      STABLE_VERSION: ${{ secrets.LAST_STABLE_VERSION }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build
+        run: dotnet build --configuration Release
+
+      - name: Publish
+        run: dotnet publish -c Release -o ./publish
+
+      # Replace this with your actual deployment command/platform
+      - name: Deploy to Production
+        run: |
+          echo "Deploying version $GITHUB_SHA to $SERVICE_URL"
+          # Example: az webapp deploy, aws deploy, etc.
+
+      - name: Wait for deployment to settle
+        run: sleep 10
+
+      - name: Run Health Check
+        id: healthcheck
+        run: |
+          response=$(curl -s --max-time 10 $SERVICE_URL/health)
+          echo "Health check response: $response"
+          if [[ "$response" != *"healthy"* ]]; then
+            echo "health=fail" >> $GITHUB_OUTPUT
+          else
+            echo "health=pass" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Rollback to Last Stable Version
+        if: steps.healthcheck.outputs.health == 'fail'
+        run: |
+          echo "Rolling back deployment!"
+          # Deploy the stable version
+          echo "Deploying stable version $STABLE_VERSION to $SERVICE_URL"
+          # Replace this with your rollback deployment command
+
+      - name: Update Stable Version
+        if: steps.healthcheck.outputs.health == 'pass'
+        run: |
+          echo "Updating LAST_STABLE_VERSION to $GITHUB_SHA"
+          # Optionally update your stable version record
